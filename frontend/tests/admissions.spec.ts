@@ -53,3 +53,30 @@ test("mobile layout keeps the student controls on screen", async ({ page }) => {
     page.getByText("Save your student number to view your applications."),
   ).toBeVisible();
 });
+
+test("an expired seat reopens and payment becomes disabled without a reload", async ({ page, request }) => {
+  test.skip(!process.env.TEST_SHORT_HOLDS, "Requires a test API configured with a 15-second hold.");
+  const api = process.env.VITE_API_URL || "http://localhost:8080";
+  const name = "Expiry check " + Date.now();
+  const created = await request.post(api + "/classes", { data: { name, totalSeats: 1 } });
+  expect(created.status()).toBe(201);
+  await page.goto("/");
+  await page.getByLabel("Student birth registration number").fill("00000000000000001");
+  await page.getByRole("button", { name: "Save ID" }).click();
+  const card = page.locator("article").filter({ has: page.getByRole("heading", { name, exact: true }) });
+  await card.getByRole("button", { name: "Apply for admission" }).click();
+  await expect(card).toContainText("HELD");
+  await expect(card).toContainText("EXPIRED", { timeout: 25000 });
+  await expect(card.getByRole("button", { name: "Pay admission fee" })).toBeDisabled();
+  await page.getByRole("button", { name: "Classes", exact: true }).click();
+  await expect(card.getByRole("button", { name: "Apply for admission" })).toBeEnabled({ timeout: 8000 });
+});
+
+test("a connection failure is visible and polling recovers", async ({ page }) => {
+  await page.route("**/classes", route => route.abort("connectionrefused"));
+  await page.goto("/");
+  await expect(page.getByRole("alert")).toContainText("Could not reach the admissions server");
+  await page.unroute("**/classes");
+  await expect(page.getByRole("alert")).toHaveCount(0, { timeout: 8000 });
+  await expect(page.getByRole("heading", { name: "Available classes" })).toBeVisible();
+});

@@ -63,6 +63,8 @@ The xUnit suite covers payment, duplicate applications, ownership, cancellation,
 
 Optional browser tests use a running API at localhost:8080 and create records there. From `frontend/`, run `npm ci`, `npx playwright install chromium` and `npx playwright test`. The suite starts its own frontend and checks student identification, class creation, admission, payment, refresh and mobile layout. Set `BROWSER_CHANNEL=chrome` to use an installed Chrome.
 
+Set `VITE_API_URL` to the address of a separate test API to keep test records out of the portal. The connection recovery test simulates an unavailable server. To also run the live expiry test, set `HOLD_DURATION_SECONDS=15` on that API and `TEST_SHORT_HOLDS=1` for Playwright.
+
 ## Project layout
 
 | Location | Contents |

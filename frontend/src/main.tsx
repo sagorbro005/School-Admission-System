@@ -263,6 +263,9 @@ function Dashboard() {
                       <p>
                         Hold deadline · {new Date(h.expiresAt).toLocaleString()}
                       </p>
+                      {status === "EXPIRED" && (
+                        <button disabled>Pay admission fee</button>
+                      )}
                       {status === "HELD" && (
                         <>
                           <p className="timer">
