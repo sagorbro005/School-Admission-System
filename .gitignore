@@ -1,0 +1,9 @@
+*.pdf
+.env
+node_modules/
+dist/
+bin/
+obj/
+TestResults/
+*.user
+.vs/
