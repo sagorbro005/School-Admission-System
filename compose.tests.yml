@@ -1,0 +1,32 @@
+x-api: &api
+  build: ./backend
+  environment:
+    ConnectionStrings__Admissions: Host=db;Database=admissions;Username=admissions;Maximum Pool Size=32
+    HOLD_DURATION_SECONDS: 15
+  depends_on:
+    db: {condition: service_healthy}
+  healthcheck:
+    test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+    interval: 2s
+    timeout: 3s
+    retries: 40
+services:
+  db:
+    image: postgres:16-alpine
+    environment: {POSTGRES_USER: admissions, POSTGRES_DB: admissions, POSTGRES_HOST_AUTH_METHOD: trust}
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -h 127.0.0.1 -U admissions"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  api-a: *api
+  api-b: *api
+  tests:
+    build: {context: ./backend, target: tests}
+    environment:
+      API_A: http://api-a:8080
+      API_B: http://api-b:8080
+      TEST_DB: Host=db;Database=admissions;Username=admissions
+    depends_on:
+      api-a: {condition: service_healthy}
+      api-b: {condition: service_healthy}

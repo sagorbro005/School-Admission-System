@@ -45,6 +45,9 @@ public sealed class Admissions(AdmissionDb db, HoldPolicy policy)
     public async Task<Application> Transition(string id, string student, bool confirm)
     {
         await using var tx = await db.Database.BeginTransactionAsync();
+        // Serialize a payment racing the last seat's expiry with new allocations.
+        // All active-state changes acquire class then hold locks in that order.
+        await db.Database.SqlQuery<string>($"SELECT c.id AS \"Value\" FROM classes c JOIN holds h ON h.class_id=c.id WHERE h.id={id} FOR UPDATE OF c").ToListAsync();
         var locked = await db.Database.SqlQuery<string>($"SELECT student_id AS \"Value\" FROM holds WHERE id={id} FOR UPDATE").ToListAsync();
         if (locked.Count == 0) throw new AdmissionError(404, "Application not found.");
         if (locked[0] != student) throw new AdmissionError(403, "This application belongs to another student.");

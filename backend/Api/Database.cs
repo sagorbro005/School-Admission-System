@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 public sealed class AdmissionDb(DbContextOptions<AdmissionDb> options) : DbContext(options)
 {
@@ -12,7 +13,10 @@ public sealed class AdmissionDb(DbContextOptions<AdmissionDb> options) : DbConte
         {
             if (await Database.SqlQuery<int>($"SELECT 1 AS \"Value\" FROM schema_versions WHERE version={name}").AnyAsync()) continue;
             using var reader = new StreamReader(assembly.GetManifestResourceStream(name)!);
-            await Database.ExecuteSqlRawAsync(await reader.ReadToEndAsync());
+            await using var command = Database.GetDbConnection().CreateCommand();
+            command.Transaction = tx.GetDbTransaction();
+            command.CommandText = await reader.ReadToEndAsync();
+            await command.ExecuteNonQueryAsync();
             await Database.ExecuteSqlInterpolatedAsync($"INSERT INTO schema_versions VALUES ({name})");
         }
         await tx.CommitAsync();

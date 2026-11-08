@@ -5,5 +5,7 @@ dist/
 bin/
 obj/
 TestResults/
+test-results/
+playwright-report/
 *.user
 .vs/
