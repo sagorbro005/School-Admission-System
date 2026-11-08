@@ -195,7 +195,9 @@ function Dashboard() {
                         holds.some(
                           (h) =>
                             h.classId === c.id &&
-                            ["HELD", "CONFIRMED"].includes(h.status),
+                            (h.status === "CONFIRMED" ||
+                              (h.status === "HELD" &&
+                                Date.parse(h.expiresAt) > now)),
                         )
                       }
                       onClick={() => {

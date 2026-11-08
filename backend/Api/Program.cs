@@ -43,7 +43,7 @@ app.MapGet("/health", async (AdmissionDb db) => await db.Database.CanConnectAsyn
 app.MapPost("/classes", async (CreateClass input, Admissions service) =>
 {
     var c = await service.Create(input);
-    return Results.Created($"/classes/{c.Id}", c);
+    return Results.Created($"/classes/{c.Id}", new { c.Id, c.Name, c.TotalSeats });
 });
 app.MapGet("/classes", (Admissions s) => s.Classes.OrderBy(c => c.Name).ThenBy(c => c.Id).ToListAsync());
 app.MapGet("/classes/{id}", async (string id, Admissions s) =>
@@ -51,14 +51,18 @@ app.MapGet("/classes/{id}", async (string id, Admissions s) =>
 app.MapPost("/classes/{id}/holds", async (string id, HttpRequest r, Admissions s) =>
 {
     var h = await s.Hold(id, Student(r));
-    return Results.Created($"/holds/{h.HoldId}", h);
+    return Results.Created($"/holds/{h.HoldId}", new { h.HoldId, h.ClassId, h.StudentId, h.Status, h.ExpiresAt });
 });
 app.MapGet("/holds/{id}", async (string id, Admissions s) =>
 {
     var h = await s.History.SingleOrDefaultAsync(h => h.HoldId == id) ?? throw new AdmissionError(404, "Application not found.");
     return new { h.HoldId, h.ClassId, h.Status, h.ExpiresAt };
 });
-app.MapPost("/holds/{id}/confirm", (string id, HttpRequest r, Admissions s) => s.Transition(id, Student(r), true));
+app.MapPost("/holds/{id}/confirm", async (string id, HttpRequest r, Admissions s) =>
+{
+    var a = await s.Transition(id, Student(r), true);
+    return Results.Ok(new { a.HoldId, a.Status });
+});
 app.MapDelete("/holds/{id}", async (string id, HttpRequest r, Admissions s) =>
 {
     await s.Transition(id, Student(r), false);
@@ -67,6 +71,9 @@ app.MapDelete("/holds/{id}", async (string id, HttpRequest r, Admissions s) =>
 app.MapGet("/me/holds", (HttpRequest r, Admissions s) =>
 {
     var id = Student(r);
-    return s.History.Where(h => h.StudentId == id).OrderByDescending(h => h.CreatedAt).ToListAsync();
+    return s.History.Where(h => h.StudentId == id)
+        .OrderByDescending(h => h.CreatedAt)
+        .Select(h => new { h.HoldId, h.ClassId, h.ClassName, h.Status, h.ExpiresAt })
+        .ToListAsync();
 });
 app.Run();

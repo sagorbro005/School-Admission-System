@@ -20,7 +20,7 @@ services:
     environment:
       ConnectionStrings__Admissions: ${ADMISSIONS_CONNECTION:-Host=db;Database=admissions;Username=admissions;Maximum Pool Size=32}
       HOLD_DURATION_SECONDS: ${HOLD_DURATION_SECONDS:-600}
-    ports: ["127.0.0.1:8080:8080"]
+    ports: ["8080:8080"]
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
       interval: 4s
@@ -33,7 +33,7 @@ services:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
     depends_on:
       backend: {condition: service_healthy}
-    ports: ["127.0.0.1:3000:80"]
+    ports: ["3000:80"]
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
       interval: 10s

@@ -1,8 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 
 public record CreateClass(string? Name, int TotalSeats);
-public record ClassInfo(string Id, string Name, int TotalSeats, int HeldSeats, int ConfirmedSeats, int AvailableSeats);
-public record Application(string HoldId, string ClassId, string ClassName, string StudentId, string Status, DateTime ExpiresAt, DateTime CreatedAt);
+public record ClassInfo(string Id, string Name, int TotalSeats, int HeldSeats = 0, int ConfirmedSeats = 0, int AvailableSeats = 0);
+public record Application(
+    string HoldId,
+    string Status,
+    string? ClassId = null,
+    string? ClassName = null,
+    string? StudentId = null,
+    DateTime? ExpiresAt = null,
+    DateTime? CreatedAt = null);
 public sealed class AdmissionError(int status, string message) : Exception(message) { public int Status => status; }
 public record HoldPolicy(int Seconds);
 
@@ -30,7 +37,7 @@ public sealed class Admissions(AdmissionDb db, HoldPolicy policy)
         await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE holds SET status='EXPIRED' WHERE class_id={classId} AND status='HELD' AND expires_at <= statement_timestamp()");
         if (await History.AnyAsync(h => h.ClassId == classId && h.StudentId == student && (h.Status == "HELD" || h.Status == "CONFIRMED")))
             throw new AdmissionError(409, "You already have an active application for this class.");
-        if (await Classes.Where(c => c.Id == classId).Select(c => c.AvailableSeats).SingleAsync() == 0)
+        if (await Classes.Where(c => c.Id == classId).Select(c => c.AvailableSeats).SingleAsync() <= 0)
             throw new AdmissionError(409, "No seats are available in this class.");
         var id = $"h_{Guid.NewGuid():N}";
         await db.Database.ExecuteSqlInterpolatedAsync($"""
