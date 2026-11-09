@@ -1,6 +1,6 @@
 # Admission rules and assumptions
 
-- **Categories.** Each class and shift has its own ID and capacity. The free-text name includes both parts. Distinct IDs may share a display name because the contract identifies classes by ID.
+- **Categories.** The name includes the class and shift. Names are unique regardless of case, extra whitespace, or dash style. When consolidating older duplicates, the earliest class keeps its ID and capacity. Application IDs and confirmations remain in history. Repeated confirmations for the same student count as one seat.
 - **Identity.** Student numbers are exactly 17 ASCII digits and may start with zero. The browser saves the selected number locally. It identifies the student on each relevant request. Anyone who knows a number can present it under this assignment's identity model.
 - **Administration.** Class creation is open because the assignment specifies no administrative credentials. The database starts empty so the evaluator can choose capacities.
 - **First come, first served.** PostgreSQL grants a row lock on the requested class. This is the ordering point for concurrent applications. Network arrival and lock acquisition can differ. A transaction at READ COMMITTED obtains the lock in a separate statement before checking current capacity. Other classes can allocate independently. Committing adds exactly one hold. Rollback releases the lock and discards the write.

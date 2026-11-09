@@ -40,11 +40,32 @@ public sealed class Workflow
         using var history=await Send(B,"/me/holds",method:HttpMethod.Get);
         Assert.Contains((await history.Content.ReadFromJsonAsync<Application[]>())!,x=>x.HoldId==h.HoldId && x.Status=="CONFIRMED");
     }
+    [Fact] public async Task DuplicateClassNamesKeepTheOriginalCapacity()
+    {
+        var grade = $"Class {Guid.NewGuid():N}";
+        var day = new CreateClass($"{grade} - Day Shift", 110);
+        var responses = await Task.WhenAll(A.PostAsJsonAsync("/classes", day), B.PostAsJsonAsync("/classes", day));
+        try
+        {
+            Assert.Single(responses, r => r.StatusCode == HttpStatusCode.Created);
+            Assert.Single(responses, r => r.StatusCode == HttpStatusCode.Conflict);
+            using var duplicate = await B.PostAsJsonAsync("/classes", new CreateClass($"{grade}  – DAY shift", 999));
+            Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+            var problem = await duplicate.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+            Assert.Equal($"{day.Name} already exists", problem.GetProperty("detail").GetString());
+            using var morning = await A.PostAsJsonAsync("/classes", new CreateClass($"{grade} - Morning Shift", 120));
+            Assert.Equal(HttpStatusCode.Created, morning.StatusCode);
+            var classes = await B.GetFromJsonAsync<ClassInfo[]>("/classes");
+            Assert.Equal(110, Assert.Single(classes!, c => c.Name == day.Name).TotalSeats);
+        }
+        finally { foreach (var response in responses) response.Dispose(); }
+    }
     [Fact] public async Task ExpirationReleasesSeatWithoutAnApiCall()
     {
         var c=await Create(1);
         var h=await Hold(c);
-        await Task.Delay(h.ExpiresAt-DateTime.UtcNow+TimeSpan.FromSeconds(3));
+        var expiresAt = Assert.IsType<DateTime>(h.ExpiresAt);
+        await Task.Delay(expiresAt-DateTime.UtcNow+TimeSpan.FromSeconds(3));
         await using var connection=new NpgsqlConnection(Environment.GetEnvironmentVariable("TEST_DB"));
         await connection.OpenAsync();
         await using var query=new NpgsqlCommand("SELECT status FROM holds WHERE id=@id",connection);

@@ -16,7 +16,7 @@ Use `docker compose down` to stop. The named PostgreSQL volume retains records f
 
 ## Try the workflow
 
-1. Open **Create class**, enter **Class 6 – Morning Shift** and a capacity of 1.
+1. Open **Create class (Admin)**, enter **Class 6 – Morning Shift** and a capacity of 1. A repeated name returns a conflict and preserves the original capacity.
 2. Save the example student number **20152691234567890** at the top of the page.
 3. Choose **Apply for admission**. **My applications** shows the hold ID, deadline and countdown.
 4. Select **Pay admission fee** and return to **Classes** to see the confirmed seat. Reopen the portal to see the saved identity and application.

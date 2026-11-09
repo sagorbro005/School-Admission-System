@@ -23,7 +23,18 @@ public sealed class Admissions(AdmissionDb db, HoldPolicy policy)
         if (string.IsNullOrWhiteSpace(name) || name.Length > 160 || name.Contains('\0') || input.TotalSeats <= 0)
             throw new AdmissionError(400, "Enter a class name of 1–160 characters and a positive seat capacity.");
         var id = $"c_{Guid.NewGuid():N}";
-        await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO classes(id,name,total_seats) VALUES ({id},{name},{input.TotalSeats})");
+        var added = await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO classes(id,name,total_seats) VALUES ({id},{name},{input.TotalSeats})
+            ON CONFLICT (class_name_key(name)) DO NOTHING
+            """);
+        if (added == 0)
+        {
+            var original = await db.Database.SqlQuery<string>($"""
+                SELECT name AS "Value" FROM classes
+                WHERE class_name_key(name)=class_name_key({name})
+                """).SingleAsync();
+            throw new AdmissionError(409, $"{original} already exists");
+        }
         return await Classes.SingleAsync(x => x.Id == id);
     }
 

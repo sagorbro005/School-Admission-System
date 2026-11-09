@@ -4,14 +4,14 @@ test("student can apply, pay and reopen the application", async ({ page }) => {
   const name = "Morning shift " + Date.now();
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Create class", exact: true })
+    .getByRole("button", { name: "Create class (Admin)", exact: true })
     .first()
     .click();
   await page.getByLabel("Class and shift name").fill(name);
   await page.getByLabel("Total seats").fill("1");
   await page
     .locator("form")
-    .getByRole("button", { name: "Create class" })
+    .getByRole("button", { name: "Create class (Admin)" })
     .click();
   const card = page
     .locator("article")
@@ -27,6 +27,7 @@ test("student can apply, pay and reopen the application", async ({ page }) => {
     .locator("article")
     .filter({ has: page.getByRole("heading", { name, exact: true }) });
   await expect(application).toContainText("HELD");
+  await expect(application.getByText(/^Application ID: h_/)).toBeVisible();
   await application.getByRole("button", { name: "Pay admission fee" }).click();
   await expect(application).toContainText("CONFIRMED");
   await page.reload();

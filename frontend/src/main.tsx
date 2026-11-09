@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { Application, ClassInfo, request, validStudent } from "./api";
 import "./style.css";
 
-type Page = "Classes" | "My applications" | "Create class";
+type Page = "Classes" | "My applications" | "Create class (Admin)";
 function Dashboard() {
   const [student, setStudent] = useState(() => {
     try {
@@ -93,7 +93,7 @@ function Dashboard() {
     if (draft === student) void refresh();
   }
   const identified = validStudent(student) && draft === student;
-  const pages: Page[] = ["Classes", "My applications", "Create class"];
+  const pages: Page[] = ["Classes", "My applications", "Create class (Admin)"];
   const available = classes.reduce((n, c) => n + c.availableSeats, 0);
   return (
     <>
@@ -166,8 +166,8 @@ function Dashboard() {
               <div className="empty">
                 <h3>No classes yet</h3>
                 <p>Create the first class and set its seat capacity.</p>
-                <button onClick={() => setPage("Create class")}>
-                  Create class
+                <button onClick={() => setPage("Create class (Admin)")}>
+                  Create class (Admin)
                 </button>
               </div>
             ) : (
@@ -261,7 +261,7 @@ function Dashboard() {
                     <article key={h.holdId}>
                       <span className={"status " + status}>{status}</span>
                       <h3>{h.className}</h3>
-                      <small>{h.holdId}</small>
+                      <small>Application ID: {h.holdId}</small>
                       <p>
                         Hold deadline · {new Date(h.expiresAt).toLocaleString()}
                       </p>
@@ -318,10 +318,10 @@ function Dashboard() {
             )}
           </section>
         )}
-        {page === "Create class" && (
+        {page === "Create class (Admin)" && (
           <section>
             <div className="heading">
-              <h2>Create class</h2>
+              <h2>Create class (Admin)</h2>
             </div>
             <form
               className="admin"
@@ -359,7 +359,7 @@ function Dashboard() {
                   placeholder="120"
                 />
               </label>
-              <button disabled={busy}>Create class</button>
+              <button disabled={busy}>Create class (Admin)</button>
             </form>
           </section>
         )}
