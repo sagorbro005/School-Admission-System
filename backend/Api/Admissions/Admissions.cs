@@ -1,23 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 
-public record CreateClass(string? Name, int TotalSeats);
-public record ClassInfo(string Id, string Name, int TotalSeats, int HeldSeats = 0, int ConfirmedSeats = 0, int AvailableSeats = 0);
-public record Application(
-    string HoldId,
-    string Status,
-    string? ClassId = null,
-    string? ClassName = null,
-    string? StudentId = null,
-    DateTime? ExpiresAt = null,
-    DateTime? CreatedAt = null);
-public sealed class AdmissionError(int status, string message) : Exception(message) { public int Status => status; }
-public record HoldPolicy(int Seconds);
+namespace SchoolAdmissions;
 
 public sealed class Admissions(AdmissionDb db, HoldPolicy policy)
 {
     public IQueryable<ClassInfo> Classes => db.Database.SqlQueryRaw<ClassInfo>("SELECT * FROM class_statistics");
     public IQueryable<Application> History => db.Database.SqlQueryRaw<Application>("SELECT * FROM application_history");
-    public async Task<ClassInfo> Create(CreateClass input)
+
+    public async Task<ClassInfo> CreateClassAsync(CreateClass input)
     {
         var name = input.Name?.Trim();
         if (string.IsNullOrWhiteSpace(name) || name.Length > 160 || name.Contains('\0') || input.TotalSeats <= 0)
@@ -38,14 +28,17 @@ public sealed class Admissions(AdmissionDb db, HoldPolicy policy)
         return await Classes.SingleAsync(x => x.Id == id);
     }
 
-    public async Task<Application> Hold(string classId, string student)
+    public async Task<Application> AllocateHoldAsync(string classId, string student)
     {
         await using var tx = await db.Database.BeginTransactionAsync();
         // Take the class lock in its own statement. READ COMMITTED gives the following
         // capacity query a fresh snapshot after waiting for the previous allocator.
-        var capacity = await db.Database.SqlQuery<int>($"SELECT total_seats AS \"Value\" FROM classes WHERE id={classId} FOR UPDATE").ToListAsync();
-        if (capacity.Count == 0) throw new AdmissionError(404, "Class not found.");
-        await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE holds SET status='EXPIRED' WHERE class_id={classId} AND status='HELD' AND expires_at <= statement_timestamp()");
+        var lockedClass = await db.Database.SqlQuery<int>($"SELECT total_seats AS \"Value\" FROM classes WHERE id={classId} FOR UPDATE").ToListAsync();
+        if (lockedClass.Count == 0) throw new AdmissionError(404, "Class not found.");
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE holds SET status='EXPIRED'
+            WHERE class_id={classId} AND status='HELD' AND expires_at <= statement_timestamp()
+            """);
         if (await History.AnyAsync(h => h.ClassId == classId && h.StudentId == student && (h.Status == "HELD" || h.Status == "CONFIRMED")))
             throw new AdmissionError(409, "You already have an active application for this class.");
         if (await Classes.Where(c => c.Id == classId).Select(c => c.AvailableSeats).SingleAsync() <= 0)
@@ -60,12 +53,15 @@ public sealed class Admissions(AdmissionDb db, HoldPolicy policy)
         return result;
     }
 
-    public async Task<Application> Transition(string id, string student, bool confirm)
+    public async Task<Application> TransitionHoldAsync(string id, string student, bool confirm)
     {
         await using var tx = await db.Database.BeginTransactionAsync();
         // Serialize a payment racing the last seat's expiry with new allocations.
         // All active-state changes acquire class then hold locks in that order.
-        await db.Database.SqlQuery<string>($"SELECT c.id AS \"Value\" FROM classes c JOIN holds h ON h.class_id=c.id WHERE h.id={id} FOR UPDATE OF c").ToListAsync();
+        await db.Database.SqlQuery<string>($"""
+            SELECT c.id AS "Value" FROM classes c
+            JOIN holds h ON h.class_id=c.id WHERE h.id={id} FOR UPDATE OF c
+            """).ToListAsync();
         var locked = await db.Database.SqlQuery<string>($"SELECT student_id AS \"Value\" FROM holds WHERE id={id} FOR UPDATE").ToListAsync();
         if (locked.Count == 0) throw new AdmissionError(404, "Application not found.");
         if (locked[0] != student) throw new AdmissionError(403, "This application belongs to another student.");
