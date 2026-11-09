@@ -1,0 +1,146 @@
+.campus {
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+  right: 0;
+  bottom: 0;
+  width: 43%;
+  height: 100%;
+  overflow: hidden;
+}
+.campus i,
+.school,
+.wing,
+.tower {
+  position: absolute;
+  display: block;
+}
+.sun {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  right: 23%;
+  top: 20px;
+  background: #ffcf79;
+  box-shadow: 0 0 0 13px #ffd99512;
+}
+.cloud {
+  width: 55px;
+  height: 7px;
+  background: #c7bbed;
+  border-radius: 8px;
+}
+.cloud-left {
+  left: 12%;
+  top: 23%;
+}
+.cloud-right {
+  right: 4%;
+  top: 37%;
+  width: 36px;
+}
+.hill {
+  border-radius: 50% 50% 0 0;
+}
+.hill-back {
+  background: #8a7dc7;
+  width: 100%;
+  height: 100%;
+  left: 36%;
+  bottom: -49%;
+  transform: rotate(-12deg);
+}
+.hill-front {
+  background: #63559d;
+  width: 135%;
+  height: 65%;
+  left: -10%;
+  bottom: -42%;
+  transform: rotate(5deg);
+}
+.school {
+  width: 55%;
+  max-width: 265px;
+  height: 126px;
+  bottom: 0;
+  right: 23%;
+}
+.wing {
+  bottom: 0;
+  width: 38%;
+  height: 64px;
+  border-top: 9px solid #dc916e;
+  background:
+    repeating-linear-gradient(90deg, #ffdda2 0 11px, transparent 11px 21px),
+    linear-gradient(#ffdda2 18%, #775387 18% 60%, #ffdda2 60%);
+}
+.wing-left {
+  left: 0;
+}
+.wing-right {
+  right: 0;
+}
+.tower {
+  width: 36%;
+  height: 94px;
+  bottom: 0;
+  left: 32%;
+  background: #ffeabd;
+  display: flex;
+  justify-content: center;
+  padding-top: 10px;
+}
+.tower:before {
+  content: "";
+  position: absolute;
+  left: -7%;
+  width: 114%;
+  height: 26px;
+  bottom: 100%;
+  background: #f5aa83;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.tower svg {
+  width: 24px;
+  height: 24px;
+  color: #825680;
+}
+.door {
+  bottom: 0;
+  height: 41%;
+  width: 36%;
+  background: #66518b;
+  border-radius: 99px 99px 0 0;
+}
+.flag {
+  width: 2px;
+  height: 25px;
+  background: #fff1d1;
+  bottom: calc(100% + 22px);
+  left: 50%;
+}
+.flag:after {
+  content: "";
+  display: block;
+  width: 18px;
+  height: 12px;
+  background: #ffab91;
+  clip-path: polygon(0 0, 100% 0, 72% 55%, 100% 100%, 0 100%);
+}
+.tree {
+  width: 40px;
+  height: 78px;
+  bottom: 0;
+  background: #9dd2bc;
+  border-radius: 80% 80% 25% 25%;
+  transform: translateY(16px);
+}
+.tree-left {
+  right: 78%;
+  height: 56px;
+  width: 30px;
+  background: #a9bbde;
+}
+.tree-right {
+  right: 9%;
+}
