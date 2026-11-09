@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Application, ClassInfo, request, validStudent } from "./api";
+import "@fontsource-variable/dm-sans/wght.css";
+import "@fontsource-variable/bricolage-grotesque/wght.css";
+import { ArrowRight, BookOpen, Building2, Check, ClipboardList, GraduationCap, IdCard, LayoutGrid, Plus, School, Sun, Sunrise, Ticket } from "lucide-react";
+import { Campus } from "./Campus";
 import "./style.css";
 
 type Page = "Classes" | "My applications" | "Create class (Admin)";
@@ -95,41 +99,18 @@ function Dashboard() {
   const identified = validStudent(student) && draft === student;
   const pages: Page[] = ["Classes", "My applications", "Create class (Admin)"];
   const available = classes.reduce((n, c) => n + c.availableSeats, 0);
+  const pageIcons = { Classes: LayoutGrid, "My applications": ClipboardList, "Create class (Admin)": Building2 };
   return (
     <>
       <header>
         <div className="brand">
-          <span className="crest" aria-hidden="true">
-            A
-          </span>{" "}
+          <span className="crest" aria-hidden="true"><GraduationCap /></span>
           School Admissions
         </div>
-        <span className="portal">Admission portal</span>
-      </header>
-      <main>
-        <section className="intro">
-          <div>
-            <div className="overline">STUDENT SERVICES</div>
-            <h1>Admissions desk</h1>
-          </div>
-          <form onSubmit={identify} className="identity">
-            <label htmlFor="student">Student birth registration number</label>
-            <div>
-              <input
-                id="student"
-                inputMode="numeric"
-                maxLength={17}
-                placeholder="17-digit registration number"
-                value={draft}
-                disabled={busy}
-                onChange={(e) => setDraft(e.target.value)}
-              />
-              <button disabled={busy}>Save ID</button>
-            </div>
-          </form>
-        </section>
         <nav aria-label="Admission sections">
-          {pages.map((p) => (
+          {pages.map((p) => {
+            const Icon = pageIcons[p];
+            return (
             <button
               key={p}
               aria-current={page === p ? "page" : undefined}
@@ -138,10 +119,29 @@ function Dashboard() {
                 setNotice("");
               }}
             >
-              {p}
+              <Icon size={17} aria-hidden="true" />{p}
             </button>
-          ))}
+          );})}
         </nav>
+      </header>
+      <main>
+        <section className="intro">
+          <div className="hero-copy">
+            <h1>Admissions desk</h1>
+            {loaded && <div className="hero-stats"><span><School />{classes.length} {classes.length === 1 ? "class" : "classes"}</span><span><Ticket />{available} open seats</span></div>}
+          </div>
+          <Campus />
+        </section>
+        <form onSubmit={identify} className="identity">
+          <span className="id-icon"><IdCard aria-hidden="true" /></span>
+          <div className="id-caption"><label htmlFor="student">Student birth registration number</label>
+            <span>{student ? "Selected student · ending in " + student.slice(-4) : "Enter your 17-digit number to apply."}</span>
+          </div>
+          <input id="student" inputMode="numeric" maxLength={17}
+            placeholder="17-digit registration number" value={draft} disabled={busy}
+            onChange={(e) => setDraft(e.target.value)} />
+          <button disabled={busy}><Check size={16} aria-hidden="true" />Save ID</button>
+        </form>
         {error && (
           <p className="alert" role="alert">
             {error}
@@ -156,9 +156,6 @@ function Dashboard() {
           <section>
             <div className="heading">
               <h2>Available classes</h2>
-              {loaded && (
-                <span className="summary">{available} open seats</span>
-              )}
             </div>
             {!loaded ? (
               <p>{error ? "Class data unavailable." : "Loading classes…"}</p>
@@ -172,8 +169,14 @@ function Dashboard() {
               </div>
             ) : (
               <div className="grid">
-                {classes.map((c) => (
-                  <article key={c.id}>
+                {classes.map((c) => {
+                  const morning = /morning/i.test(c.name);
+                  const day = /day/i.test(c.name);
+                  const Icon = morning ? Sunrise : day ? Sun : BookOpen;
+                  return (
+                  <article key={c.id} className={"class-card " + (morning ? "morning" : day ? "day" : "general")}>
+                    <div className="card-cover" aria-hidden="true"><span><Icon /></span><i /></div>
+                    <div className="card-body">
                     <h3>{c.name}</h3>
                     <dl>
                       {[
@@ -218,10 +221,11 @@ function Dashboard() {
                         }, "Seat held. Pay the admission fee before the timer ends.");
                       }}
                     >
-                      Apply for admission
+                      Apply for admission <ArrowRight aria-hidden="true" size={17} />
                     </button>
+                    </div>
                   </article>
-                ))}
+                );})}
               </div>
             )}
           </section>
@@ -258,10 +262,10 @@ function Dashboard() {
                   const status =
                     h.status === "HELD" && !left ? "EXPIRED" : h.status;
                   return (
-                    <article key={h.holdId}>
+                    <article className="application" key={h.holdId}>
                       <span className={"status " + status}>{status}</span>
                       <h3>{h.className}</h3>
-                      <small>Application ID: {h.holdId}</small>
+                      <small><b>Application ID:</b> {h.holdId}</small>
                       <p>
                         Hold deadline · {new Date(h.expiresAt).toLocaleString()}
                       </p>
@@ -359,7 +363,7 @@ function Dashboard() {
                   placeholder="120"
                 />
               </label>
-              <button disabled={busy}>Create class (Admin)</button>
+              <button disabled={busy}><Plus size={17} aria-hidden="true" />Create class (Admin)</button>
             </form>
           </section>
         )}
