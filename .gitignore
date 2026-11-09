@@ -1,11 +1,30 @@
+# Assignment PDF (confidential)
 *.pdf
+
+# Environment & local overrides
 .env
+.env.local
+
+# Node & frontend build artifacts
 node_modules/
 dist/
+.vite/
+
+# .NET & test outputs
 bin/
 obj/
 TestResults/
 test-results/
 playwright-report/
-*.user
+
+# IDE & OS files
 .vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.log
+.DS_Store
+Thumbs.db

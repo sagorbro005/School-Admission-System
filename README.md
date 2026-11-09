@@ -4,19 +4,30 @@ A school admission portal for allocating seats by class and shift. Administrator
 
 ## Quick start
 
-From the project root, run the following command with Docker Engine running in Linux container mode and Docker Compose v2 installed. The containers include the application runtimes and PostgreSQL.
+From the project root, start the entire stack using Docker Compose (Docker Engine with Linux containers and Docker Compose v2 required). No local .NET, PostgreSQL, or Node installations are needed:
 
 ```sh
-docker compose up --build -d --wait
+# Start in foreground (to view live logs):
+docker compose up --build
+
+# Or start in detached background mode:
+docker compose up --build -d
 ```
 
-| Service | Address |
-| --- | --- |
-| Admission portal | [localhost:3000](http://localhost:3000) |
-| Class list | [localhost:8080/classes](http://localhost:8080/classes) |
-| Database readiness | [localhost:8080/health](http://localhost:8080/health) |
+| Service | Address | Description |
+| :--- | :--- | :--- |
+| **Admission Portal** | [http://localhost:3000](http://localhost:3000) | React single-page application |
+| **Backend API** | [http://localhost:8080/classes](http://localhost:8080/classes) | ASP.NET Core REST API |
+| **Health Check** | [http://localhost:8080/health](http://localhost:8080/health) | Readiness & database connectivity check |
 
-The database starts first. The API applies pending migrations before serving requests, and the frontend starts after the API health check passes. For startup problems, run `docker compose ps` and `docker compose logs backend db`.
+The database container starts first. The API automatically runs pending PostgreSQL migrations before serving traffic, and the frontend becomes ready after the backend health check passes.
+
+### Stop the application
+
+```sh
+docker compose down
+```
+*(All records are stored in the persistent Docker volume `admission-data` and survive container restarts).*
 
 ### Try one admission
 
