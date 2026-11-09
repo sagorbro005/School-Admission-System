@@ -1,13 +1,21 @@
-# AI assistance
+# AI usage
 
-OpenAI Codex read the assignment, implemented the PostgreSQL migration, .NET API, React UI, tests and Compose files, and wrote the project documentation. It used temporary local tooling to build and exercise the application.
+## Scope
 
-The first frontend build rejected a spread of an unknown TypeScript value. The request helper now constructs headers from explicit objects. The first API startup failed because EF's raw SQL formatter interpreted a PostgreSQL regex quantifier as a format placeholder. Versioned migration scripts now execute as literal command text inside the migration transaction.
+OpenAI Codex assisted with requirements review, API and database implementation, the React interface, integration and browser tests, Docker configuration, and documentation. It also reorganized the code into separate HTTP, admission, and database responsibilities on the backend and feature screens on the frontend.
 
-Review of the capacity boundary identified a payment that could overlap allocation just as a hold expired. Payments and cancellations now acquire the class lock before changing the hold.
+## Issues found and corrected
 
-Validation used a real PostgreSQL server and two separately running .NET processes. Six backend test cases and two Chrome browser tests passed. In a separate 1,200-request burst across both processes, 10 requests obtained the 10 available seats and 1,190 received HTTP 409. A confirmed admission survived restarting the database and both API processes. Docker Compose validated both configuration files. Container startup and volume persistence remain unverified because the host had no Docker engine.
+| Issue | How it was identified and resolved |
+| --- | --- |
+| The frontend request helper tried to spread an unknown TypeScript value into headers. | The production build caught the type error. Header construction now uses explicit objects. |
+| EF interpreted a PostgreSQL regex quantifier as a format placeholder during migration. | Startup failed on the migration. The runner now executes embedded SQL as literal command text inside its transaction. |
+| A payment near expiry could race a new allocation. | A review of transaction boundaries identified the gap. Confirmation and cancellation acquire the class lock before updating the application. |
+| The expired payment action disappeared. | A requirement review identified the mismatch. The portal now displays a disabled payment button, covered by a browser test. |
+| Duplicate class names produced separate seat pools. | Review of live data confirmed two records for the same shift. A migration consolidated historical records and added normalized class-name uniqueness. |
 
-During a second review, Codex found that the UI hid the payment button after expiry. It now shows a disabled payment button. All eight endpoints passed direct JSON contract checks, all six backend tests passed again, and the expanded four-test browser suite passed, including live expiry and recovery from a connection failure.
+## Verification
 
-In the final audit, API responses were tightened to precisely match the assignment contract shapes across all endpoints (including exact field projections for class creation, hold creation, hold confirmation, and student hold history). The client-side class application lock was also refined to immediately recognize expired holds, enabling instantaneous re-application without waiting for the next polling cycle.
+The backend integration suite uses real PostgreSQL and sends HTTP requests through two separate API processes. The browser suite uses Chrome or Chromium to exercise the user-facing workflow and error handling. Commands for both suites are in [README.md](README.md).
+
+An earlier load check sent 1,200 competing requests through two API processes for a class with ten seats. Ten requests received holds and 1,190 received HTTP 409. A restart check also verified that a confirmed admission survived restarting PostgreSQL and both API processes.

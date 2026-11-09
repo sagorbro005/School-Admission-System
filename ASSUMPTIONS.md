@@ -1,11 +1,41 @@
-# Admission rules and assumptions
+# Admission rules and design decisions
 
-- **Categories.** The name includes the class and shift. Names are unique regardless of case, extra whitespace, or dash style. When consolidating older duplicates, the earliest class keeps its ID and capacity. Application IDs and confirmations remain in history. Repeated confirmations for the same student count as one seat.
-- **Identity.** Student numbers are exactly 17 ASCII digits and may start with zero. The browser saves the selected number locally. It identifies the student on each relevant request. Anyone who knows a number can present it under this assignment's identity model.
-- **Administration.** Class creation is open because the assignment specifies no administrative credentials. The database starts empty so the evaluator can choose capacities.
-- **First come, first served.** PostgreSQL grants a row lock on the requested class. This is the ordering point for concurrent applications. Network arrival and lock acquisition can differ. A transaction at READ COMMITTED obtains the lock in a separate statement before checking current capacity. Other classes can allocate independently. Committing adds exactly one hold. Rollback releases the lock and discards the write.
-- **Capacity.** SQL counts confirmed applications and unexpired holds. A partial unique index permits only one HELD or CONFIRMED row per student per class. Before allocating, the transaction marks expired rows in that class, allowing a student to apply again.
-- **Time.** The database clock controls every deadline and payment decision. Hold duration defaults to 600 seconds. At the deadline the seat is available. Reads immediately reflect this boundary. A background worker also persists EXPIRED in batches every second, including when no user is connected. The countdown uses the device clock as a display aid.
-- **Payment and cancellation.** The owner can pay or cancel an unexpired HELD application. Confirmation and cancellation lock the class and the hold in that order. Repeating a successful operation returns its original success status. Confirmed admissions are final because the brief specifies no withdrawal or refund process. An incompatible transition returns 409. Every attempt remains in the student's history.
-- **Multiple processes.** All writers use the same PostgreSQL locks, checks and unique index. Each worker skips rows already locked during a sweep. Startup migrations use a transaction-scoped advisory lock so concurrent instances can start safely.
-- **Local deployment.** Compose binds published services to loopback. The evaluation database accepts trusted connections inside the Compose network and has no published port. For a password-based setup, configure the PostgreSQL authentication method, password and API connection string before initializing a fresh volume.
+## Classes and capacity
+
+Each class-and-shift combination has its own ID and seat limit. The class name carries both parts, so administrators can enter the school's actual shifts. Morning and Day shifts may coexist. A database uniqueness rule ignores differences in case, extra spaces, and dash style. A duplicate request returns HTTP 409 and retains the existing capacity.
+
+When upgrading older data with duplicate names, the earliest class keeps its ID and capacity. The migration moves application history to that class and links duplicate confirmations belonging to the same student. Both application IDs remain available, and the student occupies one seat. The migration rolls back if the consolidation would exceed the original capacity.
+
+## Identity and access
+
+A student number is a 17-character string of ASCII digits; leading zeros are meaningful. The browser stores the selected number locally and sends it in the student header. Switching students changes whose history is displayed. Ownership checks use this header, so knowledge of a number is sufficient to present that identity.
+
+Class creation is available through the admin screen without credentials, as specified by the assignment. The default Compose database uses trusted connections within its container network and publishes no database port. The frontend and API use published host ports 3000 and 8080.
+
+## Application lifecycle
+
+| Starting state | Event | Result |
+| --- | --- | --- |
+| No active application in this class | Apply while a seat is available | A new **HELD** application receives a UTC deadline. |
+| **HELD** | Owner confirms before the deadline | **CONFIRMED**. Simulated payment succeeds. |
+| **HELD** | Owner cancels before the deadline | **CANCELLED**. The seat is available. |
+| **HELD** | Deadline is reached | **EXPIRED**. The seat is available immediately. |
+| **CONFIRMED** or **CANCELLED** | Owner repeats the same successful operation | The API returns success again. Seat counts stay the same. |
+
+Confirmed admissions are final. Other incompatible transitions return HTTP 409. Expired and cancelled applications stay in history and allow a new application. A student may hold or confirm seats in different classes. Within a class, a student may have only one active admission.
+
+The database clock determines expiry and eligibility to confirm. The browser countdown uses the device clock for display. The client polls after each refresh cycle, normally every four seconds, and refreshes both seat counts and student history after a mutation.
+
+## Allocation under concurrency
+
+1. The API starts a PostgreSQL transaction at the default READ COMMITTED isolation level and obtains a row lock on the requested class.
+2. After acquiring the lock, a new statement sees previously committed allocations. The transaction marks expired holds, checks the student's active application, and evaluates the class's current capacity.
+3. The transaction inserts the hold and commits. A partial unique index also enforces one active application per student per class.
+
+The grant of the class lock determines first-come ordering between competing requests. Network arrival order can differ from lock acquisition order. Other classes allocate independently. Confirmation and cancellation lock the class before the application, using the same order across API processes.
+
+Seat counts are derived from database records. Available seats equal capacity minus confirmed seats and unexpired held seats. Reads recognize an expired hold at its deadline. A background worker also persists expiry in batches of up to 500 every second, skipping locked rows so multiple workers can run together.
+
+## Persistence and startup
+
+Compose uses a named PostgreSQL volume. API startup applies pending SQL migrations in a transaction protected by a PostgreSQL advisory lock. Concurrent API startups serialize migration work, and a failed migration rolls back before the API serves traffic.
